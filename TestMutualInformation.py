@@ -6,6 +6,14 @@ from sample_set import SampleSet
 
 class TestMutualInformation(unittest.TestCase):
 
+    def test_prob_calc_one_column(self):
+        matrix = pd.read_csv('test_files/test_probability_calc.csv', dtype=np.str)
+        samples = SampleSet(matrix)
+        a_prob = samples.prob(['a'])
+        self.assertEqual(float(a_prob.query('a=="catA"').joint_prob), 0.3)
+        self.assertEqual(float(a_prob.query('a=="catB"').joint_prob), 0.25)
+        self.assertEqual(float(a_prob.query('a=="catC"').joint_prob), 0.45)
+
     def test_probability_calc_one_column(self):
         matrix = pd.read_csv('test_files/test_probability_calc.csv', dtype=np.str)
         samples = SampleSet(matrix)

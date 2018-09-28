@@ -9,6 +9,24 @@ class SampleSet():
     def __init__(self, matrix):
         self.matrix = matrix
 
+    def prob(self, columns):
+        '''
+        Joint probability for a list of column names
+        '''
+        sub_matrix = self.matrix[columns]
+        sub_matrix_count = sub_matrix.count()
+        joint_prob = sub_matrix.drop_duplicates()
+        joint_prob = joint_prob.assign(joint_prob = lambda x: np.nan)
+
+        for row in joint_prob.itertuples():
+            column_values = {column:val for column,val in row._asdict().items() if column not in ['Index', 'joint_prob']}
+            query = ' and '.join(['{column}=="{value}"'.format(column=column, value=value) for column, value in column_values.items()])
+            row_count = sub_matrix.query(query).count()
+            row_joint_prob = row_count / sub_matrix_count
+            joint_prob.at[row.Index, 'joint_prob'] = row_joint_prob
+        
+        return joint_prob
+
     def probability(self, columns):
         '''
         Joint probability for a list of column names
@@ -60,4 +78,20 @@ class SampleSet():
             mi = mi - B_probability*subA_entropy
 
         return mi
+
+    def mutual_information_new(self, groupA, groupB, groupC=[]):
+        '''
+        I(A;B|C). https://en.wikipedia.org/wiki/Conditional_mutual_information
+        '''
+        probABC = self.probability(list(set(groupA+groupB+groupC)))
+        probAC = self.probability(list(set(groupA+groupC)))
+        probBC = self.probability(list(set(groupB+groupC)))
+        probA = self.probability(groupA)
+        probB = self.probability(groupB)
+        probC = self.probability(groupC)
+        mi = 0
+        for valC in probC.keys():
+            for valB in probB.keys():
+                for valA in probA.keys():
+                    import ipdb; ipdb.set_trace()
 
