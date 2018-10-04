@@ -4,56 +4,49 @@ Its input is a pandas.DataFrame whose columns are all of numpy.str type and are 
 '''
 
 import numpy as np
+import pandas as pd
 
 class SampleSet():
     def __init__(self, matrix):
         self.matrix = matrix
 
-    def prob(self, columns):
-        '''
-        Joint probability for a list of column names
-        '''
+    def prob_non_degenerated(self, columns):
         sub_matrix = self.matrix[columns]
-        sub_matrix_count = sub_matrix.count()
+        sub_matrix_count = sub_matrix.shape[0]
         joint_prob = sub_matrix.drop_duplicates()
         joint_prob = joint_prob.assign(joint_prob = lambda x: np.nan)
 
         for row in joint_prob.itertuples():
             column_values = {column:val for column,val in row._asdict().items() if column not in ['Index', 'joint_prob']}
             query = ' and '.join(['{column}=="{value}"'.format(column=column, value=value) for column, value in column_values.items()])
-            row_count = sub_matrix.query(query).count()
+            row_count = sub_matrix.query(query).shape[0]
             row_joint_prob = row_count / sub_matrix_count
             joint_prob.at[row.Index, 'joint_prob'] = row_joint_prob
         
         return joint_prob
 
+    def prob_degenerated(self):
+        raw_data = {'joint_prob': [1]}
+        return pd.DataFrame(raw_data, columns = ['joint_prob'])
+        
     def probability(self, columns):
         '''
         Joint probability for a list of column names
         '''
-        sub_matrix = self.matrix[columns]
-        combo_count = {}
-        for sub_row in sub_matrix.values:
-            combo = ','.join(sub_row)
-            try:
-                combo_count[combo] += 1
-            except KeyError:
-                combo_count[combo] = 1
-
-        joint_probability = {}
-        for combo, count in combo_count.items():
-            joint_probability[combo] = count / len(sub_matrix.values)
-
-        return joint_probability
+        if not columns:
+            return self.prob_degenerated()
+        else:
+            return self.prob_non_degenerated(columns)
 
     def entropy(self, columns):
         '''
         Entropy for a list of column names
         '''
-        jp = self.probability(columns)
+        probablities = self.probability(columns)
         entropy = 0
-        for val in jp.values():
-            entropy += -val*np.log2(val)
+        for row in probablities.itertuples():
+            jp = row.joint_prob
+            entropy += -jp*np.log2(jp)
 
         return entropy
 
@@ -65,33 +58,39 @@ class SampleSet():
         query = ' & '.join(queries)
         return self.matrix.query(query)[groupA]
 
-    def mutual_information(self, groupA, groupB):
-        '''
-        Mutual information between columns in groupA and columns in groupB
-        '''
-        entropyA = self.entropy(groupA)
-        probB = self.probability(groupB)
-        mi = entropyA
-        for B_category, B_probability in probB.items():
-            subA = SampleSet(self.A_given_B_value(groupA, groupB, B_category))
-            subA_entropy = subA.entropy(groupA)
-            mi = mi - B_probability*subA_entropy
+    @staticmethod
+    def _get_query(columns, row):
+        column_conditions = ['{col}=="{val}"'.format(col=key, val=val) for key,val in row._asdict().items() if key in columns]
+        return ' and '.join(column_conditions)
 
-        return mi
+    @staticmethod
+    def _get_jp_for_query(jpTable, query):
+        if not query:
+            return float(jpTable.joint_prob)
+        else:
+            return float(jpTable.query(query).joint_prob)
 
-    def mutual_information_new(self, groupA, groupB, groupC=[]):
+    def _mi_for_row_values(self, row, groupA, groupB, groupConditional, probABC, probAC, probBC, probC):
+        jp_ABC = float(row.joint_prob)
+        query_AC = self._get_query(groupA+groupConditional, row)
+        jp_AC = self._get_jp_for_query(probAC, query_AC)
+        query_BC = self._get_query(groupB+groupConditional, row)
+        jp_BC = self._get_jp_for_query(probAC, query_AC)
+        query_C = self._get_query(groupConditional, row)
+        jp_C = self._get_jp_for_query(probC, query_C)
+        log = np.log2(jp_ABC*jp_C/(jp_AC*jp_BC))
+        return jp_ABC*log
+
+    def mutual_information(self, groupA, groupB, groupConditional=[]):
         '''
         I(A;B|C). https://en.wikipedia.org/wiki/Conditional_mutual_information
         '''
-        probABC = self.probability(list(set(groupA+groupB+groupC)))
-        probAC = self.probability(list(set(groupA+groupC)))
-        probBC = self.probability(list(set(groupB+groupC)))
-        probA = self.probability(groupA)
-        probB = self.probability(groupB)
-        probC = self.probability(groupC)
+        probABC = self.probability(list(set(groupA+groupB+groupConditional)))
+        probAC = self.probability(list(set(groupA+groupConditional)))
+        probBC = self.probability(list(set(groupB+groupConditional)))
+        probC = self.probability(groupConditional)
         mi = 0
-        for valC in probC.keys():
-            for valB in probB.keys():
-                for valA in probA.keys():
-                    import ipdb; ipdb.set_trace()
+        for row in probABC.itertuples():
+            mi += self._mi_for_row_values(row, groupA, groupB, groupConditional, probABC, probAC, probBC, probC)
 
+        return mi
