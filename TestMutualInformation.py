@@ -33,6 +33,29 @@ class TestMutualInformation(unittest.TestCase):
         samples = SampleSet(matrix)
         self.assertEqual(samples.mutual_information(['a'], ['b']), 1)
         
+    def test_a_b_given_c(self):
+        '''
+        The test file has 200 rows where c==1, and MI(a,b)==1, 
+        and 100 rows where c==2 and MI(a,b)==0
+        '''
+        matrix = pd.read_csv('test_files/test_conditional_mutual_information.csv', dtype=np.str)
+        samples = SampleSet(matrix)
+        self.assertEqual(samples.mutual_information(['a'], ['b'], ['c']), 0.6666666666666666)
+
+    def test_a_b_mutual_information_declining(self):
+        '''
+        1. Start with 99 rows, two vars, 3 categories, perfectly correlated
+        2. Add 100 rows, randomly generated (different random seed for each var), see that mutual information is smaller
+        3. Repeat 2, and see that mutual information is smaller yet
+        '''
+        # Create perfectly correlated df
+        df = pd.DataFrame([], columns=list('ab'))
+        for i in range(33):
+            df1 = pd.DataFrame([['1','1'], ['2','2'], ['3','3']], columns=list('ab'))
+            df = df.append(df1)
+        sase = SampleSet(df)
+        self.assertAlmostEqual(sase.mutual_information(['a'], ['b']), np.log2(3))
+        
 if __name__ == '__main__':
     unittest.main()
 
