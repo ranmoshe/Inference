@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import random
 import unittest
 
 from sample_set import SampleSet
@@ -52,10 +53,43 @@ class TestMutualInformation(unittest.TestCase):
         df = pd.DataFrame([], columns=list('ab'))
         for i in range(33):
             df1 = pd.DataFrame([['1','1'], ['2','2'], ['3','3']], columns=list('ab'))
-            df = df.append(df1)
+            df = df.append(df1, ignore_index=True)
+        sase = SampleSet(df)
+        mi1 = sase.mutual_information(['a'], ['b'])
+        self.assertAlmostEqual(mi1, np.log2(3))
+
+        # Append 100 uncorrelated rows
+        rows = [[str(random.randint(1,3)), str(random.randint(1,3))] for i in range(100)]
+        randDf = pd.DataFrame(rows, columns=list('ab'))
+        df = df.append(randDf, ignore_index=True)
+        sase = SampleSet(df)
+        mi2 = sase.mutual_information(['a'], ['b'])
+        self.assertTrue(mi2 < mi1)
+        
+        # Append another 100 uncorrelated rows
+        rows = [[str(random.randint(1,3)), str(random.randint(1,3))] for i in range(100)]
+        randDf = pd.DataFrame(rows, columns=list('ab'))
+        df = df.append(randDf, ignore_index=True)
+        sase = SampleSet(df)
+        mi3 = sase.mutual_information(['a'], ['b'])
+        self.assertTrue(mi3 < mi2)
+        
+    def test_mutual_information_vs_categories(self):
+        '''
+        Test that mutual information is similar to log(number of categories) for perfectly correlated sets
+        '''
+        # test for 3 categories
+        rows_3_cats = [['1', '1'], ['2', '2'], ['3', '3']]
+        df = pd.DataFrame(rows_3_cats, columns=list('ab'))
         sase = SampleSet(df)
         self.assertAlmostEqual(sase.mutual_information(['a'], ['b']), np.log2(3))
-        
+
+        # test for 1000 categories
+        rows_1000_cats = [[str(i), str(i)] for i in range(1000)]
+        df = pd.DataFrame(rows_1000_cats, columns=list('ab'))
+        sase = SampleSet(df)
+        self.assertAlmostEqual(sase.mutual_information(['a'], ['b']), np.log2(1000))
+
 if __name__ == '__main__':
     unittest.main()
 
