@@ -84,15 +84,33 @@ class SampleSet():
         log = np.log2(jp_ABC*jp_C/(jp_AC*jp_BC))
         return jp_ABC*log
 
-    def _likelihood(self, groupA, groupB, groupConditional, probABC, probAC, probBC):
+    def _get_null_df_for_c(self, groupA, groupB):
+        return len(groupA) - 1 + len(groupB) - 1
+
+    def _get_null_df(self, groupConditional, probABC, probAC, probBC):
+        df = 0
+        if groupConditional:
+            import ipdb; ipdb.set_trace()
+        else:
+            df += self._get_null_df_for_c(probAC, probBC)
+            
+        return df
+
+    def _get_observed_df(self, groupConditional, probABC):
+        if groupConditional:
+            raise Exception('Not implemented yet')
+        else:
+            c_count = 1
+        return len(probABC) - c_count
+
+    def _p_val(self, groupA, groupB, groupConditional, probABC, probAC, probBC):
         null_vals = [] # values for the null hypotheses
         observed_vals = []
         probC = self.probability(groupConditional)
-        null_df = 0
-        observed_df = 0
+        null_df = self._get_null_df(groupConditional, probABC, probAC, probBC)
+        observed_df = self._get_observed_df(groupConditional, probABC)
         # iterate over a|c values
         for ac_row in probAC.itertuples():
-            conditional_null_df = 0
             conditional_observed_df = 0
             c_query = self._get_query(groupConditional, ac_row)
             a_query = self._get_query(groupA, ac_row)
@@ -105,7 +123,6 @@ class SampleSet():
             except ValueError:
                 iterator = probBC.itertuples()
             for bc_row in iterator:
-                conditional_null_df += 1
                 b_query = self._get_query(groupB, bc_row)
                 null_vals.append(ac_row.joint_prob*bc_row.joint_prob*c_count)
                 if c_query:
@@ -121,10 +138,12 @@ class SampleSet():
                         observed_vals.append(0)
                 except KeyError:
                     observed_vals.append(0)
-            null_df += max(0, conditional_null_df -1)
-            observed_df += max(0, conditional_observed_df -1)
-        ddof = null_df - observed_df
-        return chisquare(f_obs=observed_vals, f_exp=null_vals, ddof=ddof)
+        final_ddof = abs(null_df - observed_df)
+        ddof = len(observed_vals) - 1 - final_ddof
+        res = chisquare(f_obs=observed_vals, f_exp=null_vals, ddof=ddof)[1]
+#        if res < 0.95:
+#            import ipdb; ipdb.set_trace()
+        return res
 
     @staticmethod
     def separate_categories(groupA, groupB, groupConditional):
@@ -159,6 +178,6 @@ class SampleSet():
         for row in probABC.itertuples():
             mi += self._mi_for_row_values(row, groupA, groupB, groupConditional, probABC, probAC, probBC, probC)
 
-        likelihood = self._likelihood(groupA, groupB, groupConditional, probABC, probAC, probBC)
+        p_val = self._p_val(groupA, groupB, groupConditional, probABC, probAC, probBC)
 
-        return {'mi': mi, 'likelihood': likelihood}
+        return {'mi': mi, 'p_val': p_val}
