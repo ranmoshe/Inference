@@ -103,7 +103,7 @@ class SampleSet():
             c_count = 1
         return len(probABC) - c_count
 
-    def _p_val(self, groupA, groupB, groupConditional, probABC, probAC, probBC):
+    def _p_val(self, groupA, groupB, groupConditional, probABC, probAC, probBC, debug):
         null_vals = [] # values for the null hypotheses
         observed_vals = []
         probC = self.probability(groupConditional)
@@ -141,8 +141,6 @@ class SampleSet():
         final_ddof = abs(null_df - observed_df)
         ddof = len(observed_vals) - 1 - final_ddof
         res = chisquare(f_obs=observed_vals, f_exp=null_vals, ddof=ddof)[1]
-#        if res < 0.95:
-#            import ipdb; ipdb.set_trace()
         return res
 
     @staticmethod
@@ -164,7 +162,7 @@ class SampleSet():
         return separate
 
 
-    def mutual_information(self, groupA, groupB, groupConditional=[]):
+    def mutual_information(self, groupA, groupB, groupConditional=[], debug=False):
         '''
         I(A;B|C). https://en.wikipedia.org/wiki/Conditional_mutual_information
         '''
@@ -178,6 +176,6 @@ class SampleSet():
         for row in probABC.itertuples():
             mi += self._mi_for_row_values(row, groupA, groupB, groupConditional, probABC, probAC, probBC, probC)
 
-        p_val = self._p_val(groupA, groupB, groupConditional, probABC, probAC, probBC)
+        p_val = self._p_val(groupA, groupB, groupConditional, probABC, probAC, probBC, debug)
 
         return {'mi': mi, 'p_val': p_val}
