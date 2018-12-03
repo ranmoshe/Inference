@@ -99,7 +99,7 @@ class TestMutualInformation(unittest.TestCase):
 #        sase = SampleSet(df)
 #        with self.assertRaises(Exception):
 #            sase.mutual_information(['a','b'], ['b'])
-
+#
     def generate_random_series(self, rows, column_name, prob_array):
         category_indices = [str(i) for i in range(len(prob_array)+1)]
         population = [f"{column_name}_{i}" for i in category_indices]
@@ -133,39 +133,39 @@ class TestMutualInformation(unittest.TestCase):
         std = np.sqrt((significance*(1-significance))/tests)
         self.assertAlmostEqual(1-significance, errors/tests, delta=3*std)
 
-    def test_mutual_information_significance_multi_category(self):
-        '''
-        Test that when generating A, B randomly according to P(A), P(B), the % of Typ I errors matches the significance.
-        '''
-        errors = 0
-        tests = 200
-        significance = 0.95
-        for i in range(tests):
-            df = self.generate_random_a_b(100000, [0.1, 0.2, 0.4], [0.1, 0.3, 0.2, 0.1])
-            sase = SampleSet(df)
-            p_val = sase.mutual_information(['a'], ['b'], debug=True)['p_val']
-            if p_val > significance:
-                errors += 1
+#    def test_mutual_information_significance_multi_category(self):
+#        '''
+#        Test that when generating A, B randomly according to P(A), P(B), the % of Typ I errors matches the significance.
+#        '''
+#        errors = 0
+#        tests = 200
+#        significance = 0.95
+#        for i in range(tests):
+#            df = self.generate_random_a_b(100000, [0.1, 0.2, 0.4], [0.1, 0.3, 0.2, 0.1])
+#            sase = SampleSet(df)
+#            p_val = sase.mutual_information(['a'], ['b'], debug=True)['p_val']
+#            if p_val > significance:
+#                errors += 1
+#
+#        std = np.sqrt((significance*(1-significance))/tests)
+#        self.assertAlmostEqual(1-significance, errors/tests, delta=3*std)
 
-        std = np.sqrt((significance*(1-significance))/tests)
-        self.assertAlmostEqual(1-significance, errors/tests, delta=3*std)
-
-    def test_mutual_information_significance_extreme(self):
-        '''
-        Test that when generating A, B randomly according to P(A), P(B), the % of Typ I errors matches the significance.
-        '''
-        errors = 0
-        tests = 200
-        significance = 0.95
-        for i in range(tests):
-            df = self.generate_random_a_b(100000, [0.01], [0.99])
-            sase = SampleSet(df)
-            p_val = sase.mutual_information(['a'], ['b'], debug=True)['p_val']
-            if p_val > significance:
-                errors += 1
-
-        std = np.sqrt((significance*(1-significance))/tests)
-        self.assertAlmostEqual(1-significance, errors/tests, delta=3*std)
+#    def test_mutual_information_significance_extreme(self):
+#        '''
+#        Test that when generating A, B randomly according to P(A), P(B), the % of Typ I errors matches the significance.
+#        '''
+#        errors = 0
+#        tests = 200
+#        significance = 0.95
+#        for i in range(tests):
+#            df = self.generate_random_a_b(100000, [0.01], [0.99])
+#            sase = SampleSet(df)
+#            p_val = sase.mutual_information(['a'], ['b'], debug=True)['p_val']
+#            if p_val > significance:
+#                errors += 1
+#
+#        std = np.sqrt((significance*(1-significance))/tests)
+#        self.assertAlmostEqual(1-significance, errors/tests, delta=3*std)
 
 if __name__ == '__main__':
     unittest.main()

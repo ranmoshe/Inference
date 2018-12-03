@@ -90,7 +90,7 @@ class SampleSet():
     def _get_null_df(self, groupConditional, probABC, probAC, probBC):
         df = 0
         if groupConditional:
-            import ipdb; ipdb.set_trace()
+            df = 0
         else:
             df += self._get_null_df_for_c(probAC, probBC)
             
@@ -103,44 +103,51 @@ class SampleSet():
             c_count = 1
         return len(probABC) - c_count
 
-    def _p_val(self, groupA, groupB, groupConditional, probABC, probAC, probBC, debug):
-        null_vals = [] # values for the null hypotheses
-        observed_vals = []
-        probC = self.probability(groupConditional)
-        null_df = self._get_null_df(groupConditional, probABC, probAC, probBC)
-        observed_df = self._get_observed_df(groupConditional, probABC)
-        # iterate over a|c values
-        for ac_row in probAC.itertuples():
-            conditional_observed_df = 0
-            c_query = self._get_query(groupConditional, ac_row)
-            a_query = self._get_query(groupA, ac_row)
-            try:
-                c_count = probC.query(c_query).iloc[0].row_count
-            except ValueError:
-                c_count = probC.iloc[0].row_count
-            try:
-                iterator = probBC.query(c_query).itertuples()
-            except ValueError:
-                iterator = probBC.itertuples()
-            for bc_row in iterator:
-                b_query = self._get_query(groupB, bc_row)
-                null_vals.append(ac_row.joint_prob*bc_row.joint_prob*c_count)
-                if c_query:
-                    joint_query = ' and '.join([a_query, b_query, c_query])
+    @classmethod
+    def _observed_vs_null(cls, groupA, groupB, matrix):
+        null = []
+        observed = []
+        df_observed = 0
+        total_rows = len(matrix)
+        a_vals = matrix[groupA].drop_duplicates()
+        b_vals = matrix[groupB].drop_duplicates()
+        df_null = len(a_vals) + len(b_vals) - 2
+        for a_val in a_vals.itertuples():
+            a_query = cls._get_query(groupA, a_val)
+            a_rows = len(matrix.query(a_query))
+            for b_val in b_vals.itertuples():
+                b_query = cls._get_query(groupB, b_val)
+                joint_query = f"{a_query} and {b_query}"
+                joint_matrix = matrix.query(joint_query)
+                b_rows = len(matrix.query(b_query))
+                null.append((b_rows/total_rows)*(a_rows/total_rows))
+                if len(joint_matrix) > 0:
+                    df_observed += 1
+                    observed.append(len(joint_matrix))
                 else:
-                    joint_query = ' and '.join([a_query, b_query])
-                try:
-                    prob_abc = probABC.query(joint_query)
-                    if not prob_abc.empty:
-                        observed_vals.append(probABC.query(joint_query).iloc[0].row_count)
-                        conditional_observed_df += 1
-                    else:
-                        observed_vals.append(0)
-                except KeyError:
-                    observed_vals.append(0)
-        final_ddof = abs(null_df - observed_df)
-        ddof = len(observed_vals) - 1 - final_ddof
+                    observed.append(0)
+        df_observed = df_observed - 1
+
+        return (null, observed, df_null, df_observed)
+
+
+    def _p_val(self, groupA, groupB, groupConditional, probABC, probAC, probBC, debug):
+        if groupConditional:
+            c_vals = self.matrix[groupConditional].drop_duplicates()
+            for c_val in c_vals.itertuples():
+                query = self._get_query(groupConditional, c_val)
+                matrix_for_c_val = self.matrix.query(query)
+                a_b_columns = list(set(groupA+groupB))
+                matrix_for_c_val = matrix_for_c_val[a_b_columns]
+                self._observed_vs_null(groupA, groupB, matrix_for_c_val)
+
+            return 0
+        else:
+            null_vals, observed_vals, null_df, observed_df = self._observed_vs_null(groupA, groupB, self.matrix)
+        final_dof = abs(null_df - observed_df)
+        ddof = len(observed_vals) - 1 - final_dof
         res = chisquare(f_obs=observed_vals, f_exp=null_vals, ddof=ddof)[1]
+        import ipdb; ipdb.set_trace()
         return res
 
     @staticmethod
