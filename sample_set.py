@@ -147,7 +147,6 @@ class SampleSet():
         final_dof = abs(null_df - observed_df)
         ddof = len(observed_vals) - 1 - final_dof
         res = chisquare(f_obs=observed_vals, f_exp=null_vals, ddof=ddof)[1]
-        import ipdb; ipdb.set_trace()
         return res
 
     @staticmethod
