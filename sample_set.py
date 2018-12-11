@@ -120,7 +120,7 @@ class SampleSet():
                 joint_query = f"{a_query} and {b_query}"
                 joint_matrix = matrix.query(joint_query)
                 b_rows = len(matrix.query(b_query))
-                null.append((b_rows/total_rows)*(a_rows/total_rows))
+                null.append((b_rows/total_rows)*a_rows)
                 if len(joint_matrix) > 0:
                     df_observed += 1
                     observed.append(len(joint_matrix))
@@ -183,5 +183,5 @@ class SampleSet():
             mi += self._mi_for_row_values(row, groupA, groupB, groupConditional, probABC, probAC, probBC, probC)
 
         p_val = self._p_val(groupA, groupB, groupConditional, probABC, probAC, probBC, debug)
-
+        
         return {'mi': mi, 'p_val': p_val}
