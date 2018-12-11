@@ -118,7 +118,7 @@ class TestMutualInformation(unittest.TestCase):
 
     def test_mutual_information_significance(self):
         '''
-        Test that when generating A, B randomly according to P(A), P(B), the % of Typ I errors matches the significance.
+        Test that when generating A, B randomly according to P(A), P(B), the % of Type I errors matches the significance.
         '''
         errors = 0
         tests = 200
@@ -135,7 +135,7 @@ class TestMutualInformation(unittest.TestCase):
 
     def test_mutual_information_significance_multi_category(self):
         '''
-        Test that when generating A, B randomly according to P(A), P(B), the % of Typ I errors matches the significance.
+        Test that when generating A, B randomly according to P(A), P(B), the % of Type I errors matches the significance.
         '''
         errors = 0
         tests = 200
@@ -152,7 +152,7 @@ class TestMutualInformation(unittest.TestCase):
 
     def test_mutual_information_significance_extreme(self):
         '''
-        Test that when generating A, B randomly according to P(A), P(B), the % of Typ I errors matches the significance.
+        Test that when generating A, B randomly according to P(A), P(B), the % of Type I errors matches the significance.
         '''
         errors = 0
         tests = 200
@@ -167,7 +167,27 @@ class TestMutualInformation(unittest.TestCase):
         std = np.sqrt((significance*(1-significance))/tests)
         self.assertAlmostEqual(1-significance, errors/tests, delta=3*std)
 
-#    def test_mutual_information_significance_with_conditional(
+    def test_mutual_information_significance_with_conditional(self):
+        '''
+        Test that when generating A, B randomly according to P(A), P(B), for a numbr of categories of a conditional group C, the % of Type I errors matches the significance.
+        '''
+        errors = 0
+        tests = 200
+        significance = 0.95
+        for i in range(tests):
+            final = pd.DataFrame({'a': [], 'b': [], 'c': []})
+            for j in [0, 5, 10]:
+                df = self.generate_random_a_b(10000, [0.05+j], [0.95-j])
+                df['c'] = j
+                final = final.append(df)
+            sase = SampleSet(final)
+            p_val = sase.mutual_information(['a'], ['b'], ['c'], debug=True)['p_val']
+            if p_val > significance:
+                errors += 1
+
+        std = np.sqrt((significance*(1-significance))/tests)
+        self.assertAlmostEqual(1-significance, errors/tests, delta=3*std)
+
 if __name__ == '__main__':
     unittest.main()
 
