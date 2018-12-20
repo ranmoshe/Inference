@@ -12,6 +12,15 @@ class SampleSet():
         self.matrix = matrix
         self.count = self.matrix.shape[0]
 
+    @staticmethod
+    def adjust_joint_prob_for_row(row, matrix, matrix_count, joint_prob):
+        column_values = {column:val for column,val in row._asdict().items() if column not in ['Index', 'joint_prob', 'row_count']}
+        query = ' and '.join(['{column}=="{value}"'.format(column=column, value=value) for column, value in column_values.items()])
+        row_count = matrix.query(query).shape[0]
+        row_joint_prob = row_count / matrix_count
+        joint_prob.at[row.Index, 'joint_prob'] = row_joint_prob
+        joint_prob.at[row.Index, 'row_count'] = row_count
+
     def prob_non_degenerated(self, columns):
         sub_matrix = self.matrix[columns]
         sub_matrix_count = sub_matrix.shape[0]
@@ -19,12 +28,7 @@ class SampleSet():
         joint_prob = joint_prob.assign(joint_prob = lambda x: np.nan, row_count = lambda x: np.nan)
 
         for row in joint_prob.itertuples():
-            column_values = {column:val for column,val in row._asdict().items() if column not in ['Index', 'joint_prob', 'row_count']}
-            query = ' and '.join(['{column}=="{value}"'.format(column=column, value=value) for column, value in column_values.items()])
-            row_count = sub_matrix.query(query).shape[0]
-            row_joint_prob = row_count / sub_matrix_count
-            joint_prob.at[row.Index, 'joint_prob'] = row_joint_prob
-            joint_prob.at[row.Index, 'row_count'] = row_count
+            self.adjust_joint_prob_for_row(row, sub_matrix, sub_matrix_count, joint_prob)
         
         return joint_prob
 
@@ -104,6 +108,20 @@ class SampleSet():
         return len(probABC) - c_count
 
     @classmethod
+    def _update_observed_vs_null_a_b(cls, a_val, b_val, a_rows, a_query, groupB, total_rows, df_observed, observed, null, matrix):
+        b_query = cls._get_query(groupB, b_val)
+        joint_query = f"{a_query} and {b_query}"
+        joint_matrix = matrix.query(joint_query)
+        b_rows = len(matrix.query(b_query))
+        null.append((b_rows/total_rows)*a_rows)
+        if len(joint_matrix) > 0:
+            df_observed += 1
+            observed.append(len(joint_matrix))
+        else:
+            observed.append(0)
+        return df_observed
+
+    @classmethod
     def _observed_vs_null(cls, groupA, groupB, matrix):
         null = []
         observed = []
@@ -116,16 +134,8 @@ class SampleSet():
             a_query = cls._get_query(groupA, a_val)
             a_rows = len(matrix.query(a_query))
             for b_val in b_vals.itertuples():
-                b_query = cls._get_query(groupB, b_val)
-                joint_query = f"{a_query} and {b_query}"
-                joint_matrix = matrix.query(joint_query)
-                b_rows = len(matrix.query(b_query))
-                null.append((b_rows/total_rows)*a_rows)
-                if len(joint_matrix) > 0:
-                    df_observed += 1
-                    observed.append(len(joint_matrix))
-                else:
-                    observed.append(0)
+                df_observed = cls._update_observed_vs_null_a_b(a_val, b_val, a_rows, a_query, groupB, total_rows, df_observed, observed, null, matrix)
+
         df_observed = df_observed - 1
 
         return (null, observed, df_null, df_observed)
