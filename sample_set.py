@@ -141,14 +141,7 @@ class SampleSet():
         return (null, observed, df_null, df_observed)
 
 
-    def _p_val(self, groupA, groupB, groupConditional, probABC, probAC, probBC, debug):
-        if groupConditional:
-            c_vals = self.matrix[groupConditional].drop_duplicates()
-            null_vals = []
-            observed_vals = []
-            null_df = 0
-            observed_df = 0
-            for c_val in c_vals.itertuples():
+    def _update_values_for_c_val(self, groupConditional, c_val, groupA, groupB, null_vals, observed_vals, null_df, observed_df):
                 query = self._get_query(groupConditional, c_val)
                 matrix_for_c_val = self.matrix.query(query)
                 a_b_columns = list(set(groupA+groupB))
@@ -158,6 +151,17 @@ class SampleSet():
                 observed_vals += c_observed_vals
                 null_df += c_null_df
                 observed_df += c_observed_df
+                return (null_df, observed_df)
+
+    def _p_val(self, groupA, groupB, groupConditional, probABC, probAC, probBC, debug):
+        if groupConditional:
+            c_vals = self.matrix[groupConditional].drop_duplicates()
+            null_vals = []
+            observed_vals = []
+            null_df = 0
+            observed_df = 0
+            for c_val in c_vals.itertuples():
+                null_df, observed_df = self._update_values_for_c_val(groupConditional, c_val, groupA, groupB, null_vals, observed_vals, null_df, observed_df)
 
         else:
             null_vals, observed_vals, null_df, observed_df = self._observed_vs_null(groupA, groupB, self.matrix)
