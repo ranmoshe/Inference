@@ -154,6 +154,11 @@ class SampleSet():
                 return (null_df, observed_df)
 
     def _p_val(self, groupA, groupB, groupConditional, probABC, probAC, probBC, debug):
+        '''
+        Wilk's theorem (https://en.wikipedia.org/wiki/Wilks'_theorem) states that log-likelihood ratio is:
+        1. chi-square distributed
+        2. degrees of freedom = dof(alternative hypothesis) - dof(null hypothesis)
+        '''
         if groupConditional:
             c_vals = self.matrix[groupConditional].drop_duplicates()
             null_vals = []
