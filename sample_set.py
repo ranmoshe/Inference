@@ -12,38 +12,44 @@ class SampleSet():
         self.matrix = matrix
         self.count = self.matrix.shape[0]
 
-    @staticmethod
-    def adjust_joint_prob_for_row(row, matrix, matrix_count, joint_prob):
-        column_values = {column:val for column,val in row._asdict().items() if column not in ['Index', 'joint_prob', 'row_count']}
-        query = ' and '.join(['{column}=="{value}"'.format(column=column, value=value) for column, value in column_values.items()])
-        row_count = matrix.query(query).shape[0]
-        row_joint_prob = row_count / matrix_count
-        joint_prob.at[row.Index, 'joint_prob'] = row_joint_prob
-        joint_prob.at[row.Index, 'row_count'] = row_count
+    # @staticmethod
+    # def adjust_joint_prob_for_row(row, matrix, matrix_count, joint_prob):
+    #     column_values = {column:val for column,val in row._asdict().items() if column not in ['Index', 'joint_prob', 'row_count']}
+    #     query = ' and '.join(['{column}=="{value}"'.format(column=column, value=value) for column, value in column_values.items()])
+    #     row_count = matrix.query(query).shape[0]
+    #     row_joint_prob = row_count / matrix_count
+    #     joint_prob.at[row.Index, 'joint_prob'] = row_joint_prob
+    #     joint_prob.at[row.Index, 'row_count'] = row_count
 
-    def prob_non_degenerated(self, columns):
-        sub_matrix = self.matrix[columns]
-        sub_matrix_count = sub_matrix.shape[0]
-        joint_prob = sub_matrix.drop_duplicates()
-        joint_prob = joint_prob.assign(joint_prob = lambda x: np.nan, row_count = lambda x: np.nan)
-
-        for row in joint_prob.itertuples():
-            self.adjust_joint_prob_for_row(row, sub_matrix, sub_matrix_count, joint_prob)
-        
+    def prob_non_degenerated(self, columns, index):
+        joint_prob = self.matrix.groupby(columns).size().reset_index(name="row_count")
+        joint_prob["joint_prob"] = joint_prob["row_count"] / self.matrix.shape[0]
+        if index:
+            return joint_prob.set_index(columns)
         return joint_prob
+
+        # sub_matrix = self.matrix[columns]
+        # sub_matrix_count = sub_matrix.shape[0]
+        # joint_prob = sub_matrix.drop_duplicates()
+        # joint_prob = joint_prob.assign(joint_prob = lambda x: np.nan, row_count = lambda x: np.nan)
+        
+        # for row in joint_prob.itertuples():
+        #     self.adjust_joint_prob_for_row(row, sub_matrix, sub_matrix_count, joint_prob)
+        
+        # return joint_prob
 
     def prob_degenerated(self):
         raw_data = {'joint_prob': [1], 'row_count': [self.matrix.shape[0]]}
         return pd.DataFrame(raw_data, columns = ['joint_prob', 'row_count'])
         
-    def probability(self, columns):
+    def probability(self, columns, index=True):
         '''
         Joint probability for a list of column names
         '''
         if not columns:
             return self.prob_degenerated()
         else:
-            return self.prob_non_degenerated(columns)
+            return self.prob_non_degenerated(columns, index=index)
 
     def entropy(self, columns):
         '''
@@ -78,13 +84,28 @@ class SampleSet():
             return float(jpTable.query(query).joint_prob)
 
     def _mi_for_row_values(self, row, groupA, groupB, groupConditional, probABC, probAC, probBC, probC):
+        rd = row._asdict()
+
         jp_ABC = float(row.joint_prob)
-        query_AC = self._get_query(groupA+groupConditional, row)
-        jp_AC = self._get_jp_for_query(probAC, query_AC)
-        query_BC = self._get_query(groupB+groupConditional, row)
-        jp_BC = self._get_jp_for_query(probAC, query_AC)
-        query_C = self._get_query(groupConditional, row)
-        jp_C = self._get_jp_for_query(probC, query_C)
+        
+        # query_AC = self._get_query(groupA+groupConditional, row)
+        # jp_AC = self._get_jp_for_query(probAC, query_AC)
+        key = tuple(rd[c] for c in probAC.index.names)
+        jp_AC = probAC.loc[key]["joint_prob"]
+
+        # query_BC = self._get_query(groupB+groupConditional, row)
+        # jp_BC = self._get_jp_for_query(probAC, query_AC)
+        key = tuple(rd[c] for c in probBC.index.names)
+        jp_BC = probBC.loc[key]["joint_prob"]
+
+        # query_C = self._get_query(groupConditional, row)
+        # jp_C = self._get_jp_for_query(probC, query_C)
+        if len(groupConditional) == 0:
+            jp_C = 1
+        else:
+            key = tuple(rd[c] for c in probC.index.names)
+            jp_C = probC.loc[key]["joint_prob"]
+
         log = np.log2(jp_ABC*jp_C/(jp_AC*jp_BC))
         return jp_ABC*log
 
@@ -200,14 +221,14 @@ class SampleSet():
         '''
         if not self.separate_categories(groupA, groupB, groupConditional):
             raise Exception('No mutual values allowed between groups')
-        probABC = self.probability(list(set(groupA+groupB+groupConditional)))
-        probAC = self.probability(list(set(groupA+groupConditional)))
-        probBC = self.probability(list(set(groupB+groupConditional)))
-        probC = self.probability(groupConditional)
+        probABC = self.probability(list(set(groupA+groupB+groupConditional)), index=False)
+        probAC = self.probability(list(set(groupA+groupConditional)), index=True)
+        probBC = self.probability(list(set(groupB+groupConditional)), index=True)
+        probC = self.probability(groupConditional, index=True)
+
         mi = 0
         for row in probABC.itertuples():
             mi += self._mi_for_row_values(row, groupA, groupB, groupConditional, probABC, probAC, probBC, probC)
 
         p_val = self._p_val(groupA, groupB, groupConditional, probABC, probAC, probBC, debug)
-        
         return {'mi': mi, 'p_val': p_val}
