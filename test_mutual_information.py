@@ -121,7 +121,7 @@ class TestMutualInformation(unittest.TestCase):
         Test that when generating A, B randomly according to P(A), P(B), the % of Type I errors matches the significance.
         '''
         errors = 0
-        tests = 200
+        tests = 10
         significance = 0.95
         for i in range(tests):
             df = self.generate_random_a_b(100, [0.3], [0.7])
@@ -138,7 +138,7 @@ class TestMutualInformation(unittest.TestCase):
         Test that when generating A, B randomly according to P(A), P(B), the % of Type I errors matches the significance.
         '''
         errors = 0
-        tests = 200
+        tests = 10
         significance = 0.95
         for i in range(tests):
             df = self.generate_random_a_b(100000, [0.1, 0.2, 0.4], [0.1, 0.3, 0.2, 0.1])
@@ -155,7 +155,7 @@ class TestMutualInformation(unittest.TestCase):
         Test that when generating A, B randomly according to P(A), P(B), the % of Type I errors matches the significance.
         '''
         errors = 0
-        tests = 200
+        tests = 10
         significance = 0.95
         for i in range(tests):
             df = self.generate_random_a_b(100000, [0.01], [0.99])
@@ -172,7 +172,7 @@ class TestMutualInformation(unittest.TestCase):
         Test that when generating A, B randomly according to P(A), P(B), for a numbr of categories of a conditional group C, the % of Type I errors matches the significance.
         '''
         errors = 0
-        tests = 200
+        tests = 10
         significance = 0.95
         for i in range(tests):
             final = pd.DataFrame({'a': [], 'b': [], 'c': []})
