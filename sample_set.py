@@ -5,7 +5,7 @@ Its input is a pandas.DataFrame whose columns are all of numpy.str type and are 
 
 import numpy as np
 import pandas as pd
-from scipy.stats import chisquare
+from scipy.stats import chisquare, chi2
 
 class SampleSet():
     def __init__(self, matrix):
@@ -153,6 +153,61 @@ class SampleSet():
                 observed_df += c_observed_df
                 return (null_df, observed_df)
 
+    @staticmethod
+    def _generalize_names(probA, probB, probAB, groupA, groupB):
+        probFirst = probA.rename(columns={groupA[0]: 'first'})
+        probSecond = probB.rename(columns={groupB[0]: 'second'})
+        jointProb = probAB.rename(columns={groupA[0]: 'first', groupB[0]: 'second'})
+        return (probFirst, probSecond, jointProb)
+
+    def _alt_p_val(self, groupA, groupB, groupConditional, probABC, probAC, probBC, debug):
+        '''
+        Wilks' theorem (https://en.wikipedia.org/wiki/Wilks'_theorem) states that log-likelihood ratio is:
+        1. chi-square distributed
+        2. degrees of freedom = dof(alternative hypothesis) - dof(null hypothesis)
+        '''
+        if groupConditional:
+            import ipdb; ipdb.set_trace()
+        else:
+            probFirst, probSecond, jointProb = self._generalize_names(probAC, probBC, probABC, groupA, groupB)
+            dfs, likelihood_ratio = self._likelihood_ratio(probFirst, probSecond, jointProb)
+        return chi2.pdf(likelihood_ratio, dfs)
+
+    @staticmethod
+    def _get_null_df(firstGroup, secondGroup):
+        '''
+        Null hypothesis degrees of freedom
+        '''
+        first_df = len(firstGroup.index) - 1
+        second_df = len(secondGroup.index) - 1
+        return first_df + second_df
+
+    @staticmethod
+    def _get_h_df(jointProbability):
+        '''
+        Alternative hypothesis degrees of freedom
+        '''
+        return len(jointProbability.index) - 1
+
+    @staticmethod
+    def _update_statistic_with_row(row, firstGroup, secondGroup):
+        null_first_likelihood = float(firstGroup[firstGroup['first']==row['first']].joint_prob)
+        null_second_likelihood = float(secondGroup[secondGroup['second']==row['second']].joint_prob)
+        null_likelihood = null_first_likelihood*null_second_likelihood
+
+        h_likelihood = row.joint_prob
+        
+        return row.row_count*np.log(h_likelihood/null_likelihood)
+
+    def _likelihood_ratio(self, probFirst, probSecond, jointProb):
+        null_df = self._get_null_df(probFirst, probSecond)  # null hypothesis degrees of freedom
+        h_df = self._get_h_df(jointProb)
+        statistic = 0
+        for _, row in jointProb.iterrows():
+            statistic += self._update_statistic_with_row(row, probFirst, probSecond)
+        return (abs(null_df-h_df), 2*statistic)
+
+        
     def _p_val(self, groupA, groupB, groupConditional, probABC, probAC, probBC, debug):
         '''
         Wilk's theorem (https://en.wikipedia.org/wiki/Wilks'_theorem) states that log-likelihood ratio is:
