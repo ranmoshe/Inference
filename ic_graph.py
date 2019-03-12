@@ -70,9 +70,39 @@ class IC_Graph():
                     self.graph.remove_edge(node2, neighbor)
                     self.graph.add_edges_from([(node1, neighbor), (node2, neighbor)], out=neighbor)
 
+    @staticmethod
+    def get_directed_all_directions(directed):
+        edges2d = [[(edge[0], edge[1]), (edge[1], edge[0])] for edge in directed]
+        return list(itertools.chain.from_iterable(edges2d))
+
+    def get_edges_with_types(self):
+        directed = [(t, t[2]) for t in self.graph.edges.data('out') if t[2] is not None]
+        directed_star = [(t, t[2]) for t in self.graph.edges.data('out_star') if t[2] is not None]
+        directed_edges = [t[0] for t in directed + directed_star]
+        out_nodes = [t[1] for t in directed + directed_star]
+        directed_all_directions = self.get_directed_all_directions(directed_edges)
+        non_directed_edges = [edge for edge in self.graph.edges if edge not in directed_all_directions]
+        return (directed_edges, list(set(out_nodes)), non_directed_edges)
+
+    @staticmethod
+    def get_neighbor(node, edge):
+        node_idx = edge.index(node)
+        neighbor_idx = 1 if node_idx == 0 else 0
+        return edge[neighbor_idx]
+
+    def ic_step_3_r1(self):
+        _, out_nodes, non_directed_edges = self.get_edges_with_types()
+        for node in out_nodes:
+            for edge in non_directed_edges:
+                if node in edge:
+                    neighbor = self.get_neighbor(node, edge)
+                    self.graph.remove_edge(node, neighbor)
+                    self.graph.add_edges_from([(node, neighbor)], out_star=neighbor)
+
     def build_graph(self):
         independents = self.ic_step_1()
         self.ic_step_2(independents)
+        self.ic_step_3_r1()
 
     def ic_graph(self):
         return None

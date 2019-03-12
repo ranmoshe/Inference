@@ -121,7 +121,6 @@ class TestGraph(unittest.TestCase):
         ic_graph = IC_Graph(SampleSet(df))
         ic_graph.build_graph()
         directed = [t for t in ic_graph.graph.edges.data('out') if t[2] is not None]
-        import ipdb; ipdb.set_trace()
 
         self.assertEqual(
                 [],
@@ -138,7 +137,7 @@ class TestGraph(unittest.TestCase):
         If the cat is left alone, it can chase the mouse, and then the mouse would mostly run.
         The algorithm can't determine causal relationship by this data, so we expect an undirected chain.
         '''
-        dog_series = generate_random_series(10000, 'dog', [0.2])
+        dog_series = generate_random_series(100000, 'dog', [0.2])
         df = pd.DataFrame({'dog': dog_series})
         df['dog'] = df['dog'].map({'dog_0': 'resting', 'dog_1': 'running'})
         df['cat'] = df.apply(lambda row: self.hunted_state(row['dog'], 0.8, 0.2), axis=1)
@@ -155,6 +154,33 @@ class TestGraph(unittest.TestCase):
                 [('dog', 'cat'), ('cat', 'mouse')], 
                 [t for t in ic_graph.graph.edges])
         
+    def test_r1(self):
+        '''
+        See that IC*.Step3.R1 works:
+        Given A -> C, B -> C, C - D, see that the step outputs C -*> D
+        '''
+        a_series = generate_random_series(10000, 'A', [0.2])
+        b_series = generate_random_series(10000, 'B', [0.2])
+        c_series = generate_random_series(10000, 'C', [0.2])
+        d_series = generate_random_series(10000, 'D', [0.2])
+        df = pd.DataFrame({'A': a_series, 'B': b_series, 'C': c_series, 'D': d_series})
+        ic_graph = IC_Graph(SampleSet(df))
+        ic_graph.graph.add_edges_from([('A', 'C'), ('B', 'C')], out='C')
+        ic_graph.graph.add_edge('C', 'D')
+        ic_graph.ic_step_3_r1()
+        directed = [t for t in ic_graph.graph.edges.data('out') if t[2] is not None]
+        directed_star = [t for t in ic_graph.graph.edges.data('out_star') if t[2] is not None]
+
+        self.assertEqual(
+                [('A', 'C', 'C'), ('B', 'C', 'C')],
+                directed
+                )
+        self.assertEqual(
+                [('C', 'D', 'D')],
+                directed_star
+                )
+        self.assertEqual(len(ic_graph.graph.edges), 3)
+
 
 if __name__ == '__main__':
     unittest.main()
