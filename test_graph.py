@@ -45,13 +45,13 @@ class TestGraph(unittest.TestCase):
         The kitchen is either tidy or messy.
         Let's see if the graph captures that.
         '''
-        df = generate_random_a_b(1000, [0.3], [0.2], a_name='cat', b_name='owner')
+        df = generate_random_a_b(100000, [0.3], [0.2], a_name='cat', b_name='owner')
         df['cat'] = df['cat'].map({'cat_0': 'near', 'cat_1': 'far'})
         df['owner'] = df['owner'].map({'owner_0': 'near', 'owner_1': 'far'})
         df['kitchen'] = df.apply(lambda row: self.kitchen_state(row), axis=1)
         ic_graph = IC_Graph(SampleSet(df))
         ic_graph.build_graph()
-        directed = [t for t in ic_graph.graph.edges.data('out')]
+        directed = [t for t in ic_graph.graph.edges.data('out') if t[2] is not None]
 
         self.assertEqual(
                 [('cat', 'kitchen', 'kitchen'), ('owner', 'kitchen', 'kitchen')],
@@ -113,7 +113,7 @@ class TestGraph(unittest.TestCase):
         The algorithm can't determine causal relationship by this data, so we expect an undirected chain.
         '''
 
-        season_series = generate_random_series(10000, 'season', [0.35, 0.15, 0.35])
+        season_series = generate_random_series(100000, 'season', [0.35, 0.15, 0.35])
         df = pd.DataFrame({'season': season_series})
         df['season'] = df['season'].map({'season_0': 'winter', 'season_1': 'spring','season_2': 'summer', 'season_3': 'fall'})
         df['temperature'] = df.apply(lambda row: self.season_to_temperature(row['season']), axis=1)
@@ -159,10 +159,10 @@ class TestGraph(unittest.TestCase):
         See that IC*.Step3.R1 works:
         Given A -> C, B -> C, C - D, see that the step outputs C -*> D
         '''
-        a_series = generate_random_series(10000, 'A', [0.2])
-        b_series = generate_random_series(10000, 'B', [0.2])
-        c_series = generate_random_series(10000, 'C', [0.2])
-        d_series = generate_random_series(10000, 'D', [0.2])
+        a_series = generate_random_series(100000, 'A', [0.2])
+        b_series = generate_random_series(100000, 'B', [0.2])
+        c_series = generate_random_series(100000, 'C', [0.2])
+        d_series = generate_random_series(100000, 'D', [0.2])
         df = pd.DataFrame({'A': a_series, 'B': b_series, 'C': c_series, 'D': d_series})
         ic_graph = IC_Graph(SampleSet(df))
         ic_graph.graph.add_edges_from([('A', 'C'), ('B', 'C')], out='C')

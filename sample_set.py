@@ -43,6 +43,8 @@ class SampleSet():
         if not columns:
             return self.prob_degenerated()
         else:
+            if columns == ['70_uploads', 'num_of_module_created', 'gender']:
+                import ipdb; ipdb.set_trace()
             return self.prob_non_degenerated(columns)
 
     def entropy(self, columns):
@@ -255,6 +257,8 @@ class SampleSet():
         '''
         if not self.separate_categories(groupA, groupB, groupConditional):
             raise Exception('No mutual values allowed between groups')
+#        if groupA+groupB+groupConditional == ['gender', 'num_of_module_created', '70_uploads']:
+#            import ipdb; ipdb.set_trace()
         probABC = self.probability(list(set(groupA+groupB+groupConditional)))
         probAC = self.probability(list(set(groupA+groupConditional)))
         probBC = self.probability(list(set(groupB+groupConditional)))

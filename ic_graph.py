@@ -38,9 +38,15 @@ class IC_Graph():
         If P val is bigger, method return True => nodes are independent
         '''
         for subset in self._subsets(rest):
-            res = self.smp.mutual_information([node1], [node2], subset)
-            if node1 == 'dog' and node2 == 'mouse':
-                self.print_results(res, node1, node2, subset)
+            try:
+#                if node1 == 'gender' and node2 == 'num_of_module_created' and subset == ['70_uploads']:
+#                    import ipdb; ipdb.set_trace()
+                res = self.smp.mutual_information([node1], [node2], subset)
+            except Exception as e:
+                import ipdb; ipdb.set_trace()
+                pass
+#            if node1 == 'dog' and node2 == 'mouse':
+#                self.print_results(res, node1, node2, subset)
             p_val = res['p_val']
             if p_val > self.SIGNIFICANCE_LEVEL:
                 return True, p_val, subset
@@ -99,10 +105,14 @@ class IC_Graph():
                     self.graph.remove_edge(node, neighbor)
                     self.graph.add_edges_from([(node, neighbor)], out_star=neighbor)
 
+    def ic_step_3_r2(self):
+        pass
+
     def build_graph(self):
         independents = self.ic_step_1()
         self.ic_step_2(independents)
         self.ic_step_3_r1()
+        self.ic_step_3_r2()
 
     def ic_graph(self):
         return None
