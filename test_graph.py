@@ -7,8 +7,7 @@ from ic_graph import IC_Graph
 from sample_set import SampleSet
 from utils import generate_random_a_b, generate_random_series
 
-class TestGraph(unittest.TestCase):
-
+class TestGraph(unittest.TestCase): 
     @staticmethod
     def kitchen_state(row):
         if row['cat'] == 'near':
@@ -180,7 +179,6 @@ class TestGraph(unittest.TestCase):
                 directed_star
                 )
         self.assertEqual(len(ic_graph.graph.edges), 3)
-
 
 if __name__ == '__main__':
     unittest.main()

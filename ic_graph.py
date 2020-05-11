@@ -11,13 +11,13 @@ class HybridGraph(nx.Graph):
         self.add_edge(out_node, in_node, out=out_node)
 
 class IC_Graph():
-    SIGNIFICANCE_LEVEL = 0.1
 
-    def __init__(self, sampleSet):
+    def __init__(self, sampleSet, SIGNIFICANCE_LEVEL=0.01):
         self.smp = sampleSet
         self.graph = nx.Graph()
         self.graph.add_nodes_from(self.smp.matrix.columns)
         self.nodes = self.graph.nodes
+        self.SIGNIFICANCE_LEVEL = SIGNIFICANCE_LEVEL
 
     @staticmethod
     def _subsets(groupList):
@@ -39,7 +39,7 @@ class IC_Graph():
         '''
         for subset in self._subsets(rest):
             try:
-#                if node1 == 'gender' and node2 == 'num_of_module_created' and subset == ['70_uploads']:
+#                if node1 == 'publisher' and node2 == 'cost_quantiles_col' and subset == ['tracking_template']:
 #                    import ipdb; ipdb.set_trace()
                 res = self.smp.mutual_information([node1], [node2], subset)
             except Exception as e:

@@ -43,8 +43,8 @@ class SampleSet():
         if not columns:
             return self.prob_degenerated()
         else:
-            if columns == ['70_uploads', 'num_of_module_created', 'gender']:
-                import ipdb; ipdb.set_trace()
+#            if columns == ['70_uploads', 'num_of_module_created', 'gender']:
+#                import ipdb; ipdb.set_trace()
             return self.prob_non_degenerated(columns)
 
     def entropy(self, columns):
