@@ -36,6 +36,80 @@ class TestGraph(unittest.TestCase):
         return choice
 
 
+    @staticmethod
+    def is_click(row):
+        if row['A'] == 'A_0' or row['B'] == 'B_0' or row['C'] == 'C_0':
+            return 'click'
+        return 'no_click'
+
+    @staticmethod
+    def A_B_dependency(row):
+        A_choice = random.choices(population=[0,1], weights=[0.1, 0.9])
+        if row['A'] == 'A_0' and A_choice == [0]:
+            return 'C_0'
+        B_choice = random.choices(population=[0,1], weights=[0.1, 0.9])
+        if row['B'] == 'B_0' and B_choice == [0]:
+            return 'C_0'
+        return 'C_1'
+
+    @staticmethod
+    def C_dependency(row):
+        C_choice = random.choices(population=[0,1], weights=[0.1, 0.9])
+        if row['C'] == 'C_0' and C_choice == [0]:
+            return 'D_0'
+        return 'D_1'
+
+
+    def test_one_starred_relation(self):
+        '''
+        A and B cause C, C causes D
+        '''
+        rows = 100000
+        A = generate_random_series(rows, 'A', [0.1])
+        B = generate_random_series(rows, 'B', [0.1])
+        df = pd.DataFrame({'A': A, 'B': B})
+        df['C'] = df.apply(lambda row: self.A_B_dependency(row), axis='columns')
+        df['D'] = df.apply(lambda row: self.C_dependency(row), axis = 'columns')
+        ic_graph = IC_Graph(SampleSet(df))
+        ic_graph.build_graph()
+        directed = [t for t in ic_graph.graph.edges.data('out') if t[2] is not None]
+        directed_star = [t for t in ic_graph.graph.edges.data('out_star') if t[2] is not None]
+
+        self.assertEqual(
+                [('A', 'C', 'C'), ('B', 'C', 'C')],
+                directed
+                )
+        self.assertEqual(
+                [('C', 'D', 'D')],
+                directed_star
+                )
+        self.assertEqual(len(ic_graph.graph.edges), 3)
+
+
+    def test_3_causes_structure(self):
+        '''
+        We have 3 users (A, B, C) who are the only users who visit a web page 
+        Any of them, when visiting, may click something within the page at a 1% chance
+        We want to capture a v structure, but with all 3 users leading to the page
+        '''
+        rows = 100000
+        A = generate_random_series(rows, 'A', [0.01])
+        B = generate_random_series(rows, 'B', [0.01])
+        C = generate_random_series(rows, 'C', [0.01])
+        df = pd.DataFrame({'A': A, 'B': B, 'C': C})
+        df['click'] = df.apply(lambda row: self.is_click(row), axis='columns')
+        ic_graph = IC_Graph(SampleSet(df))
+        ic_graph.build_graph()
+        directed = [t for t in ic_graph.graph.edges.data('out') if t[2] is not None]
+
+        self.assertEqual(
+                [('A', 'click', 'click'), ('B', 'click', 'click'), ('C', 'click', 'click')],
+                directed
+                )
+        self.assertEqual(len(ic_graph.graph.edges), 3)
+
+
+
     def test_v_structure(self):
         '''
         We have a cat, an owner and a kitchen.

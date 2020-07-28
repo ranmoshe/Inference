@@ -39,14 +39,12 @@ class IC_Graph():
         '''
         for subset in self._subsets(rest):
             try:
-#                if node1 == 'publisher' and node2 == 'cost_quantiles_col' and subset == ['tracking_template']:
+#                if node1 == 'A' and node2 == 'D' and 'C' in subset:
 #                    import ipdb; ipdb.set_trace()
                 res = self.smp.mutual_information([node1], [node2], subset)
             except Exception as e:
                 import ipdb; ipdb.set_trace()
                 pass
-#            if node1 == 'dog' and node2 == 'mouse':
-#                self.print_results(res, node1, node2, subset)
             p_val = res['p_val']
             if p_val > self.SIGNIFICANCE_LEVEL:
                 return True, p_val, subset

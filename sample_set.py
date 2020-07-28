@@ -13,13 +13,13 @@ class SampleSet():
         self.count = self.matrix.shape[0]
 
     @staticmethod
-    def adjust_joint_prob_for_row(row, matrix, matrix_count, joint_prob):
-        column_values = {column:val for column,val in row._asdict().items() if column not in ['Index', 'joint_prob', 'row_count']}
+    def adjust_joint_prob_for_row(index, row, matrix, matrix_count, joint_prob):
+        column_values = {column:val for column,val in row.items() if column not in ['Index', 'joint_prob', 'row_count']}
         query = ' and '.join(['{column}=="{value}"'.format(column=column, value=value) for column, value in column_values.items()])
         row_count = matrix.query(query).shape[0]
         row_joint_prob = row_count / matrix_count
-        joint_prob.at[row.Index, 'joint_prob'] = row_joint_prob
-        joint_prob.at[row.Index, 'row_count'] = row_count
+        joint_prob.at[index, 'joint_prob'] = row_joint_prob
+        joint_prob.at[index, 'row_count'] = row_count
 
     def prob_non_degenerated(self, columns):
         sub_matrix = self.matrix[columns]
@@ -27,8 +27,8 @@ class SampleSet():
         joint_prob = sub_matrix.drop_duplicates()
         joint_prob = joint_prob.assign(joint_prob = lambda x: np.nan, row_count = lambda x: np.nan)
 
-        for row in joint_prob.itertuples():
-            self.adjust_joint_prob_for_row(row, sub_matrix, sub_matrix_count, joint_prob)
+        for index, row in joint_prob.iterrows():
+            self.adjust_joint_prob_for_row(index, row, sub_matrix, sub_matrix_count, joint_prob)
         
         return joint_prob
 
@@ -43,8 +43,6 @@ class SampleSet():
         if not columns:
             return self.prob_degenerated()
         else:
-#            if columns == ['70_uploads', 'num_of_module_created', 'gender']:
-#                import ipdb; ipdb.set_trace()
             return self.prob_non_degenerated(columns)
 
     def entropy(self, columns):
@@ -257,8 +255,6 @@ class SampleSet():
         '''
         if not self.separate_categories(groupA, groupB, groupConditional):
             raise Exception('No mutual values allowed between groups')
-#        if groupA+groupB+groupConditional == ['gender', 'num_of_module_created', '70_uploads']:
-#            import ipdb; ipdb.set_trace()
         probABC = self.probability(list(set(groupA+groupB+groupConditional)))
         probAC = self.probability(list(set(groupA+groupConditional)))
         probBC = self.probability(list(set(groupB+groupConditional)))
